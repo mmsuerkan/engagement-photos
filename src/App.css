@@ -57,6 +57,7 @@
   overflow: hidden;
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   transition: transform 0.3s ease;
+  position: relative;
 }
 
 .photo-item:hover {
@@ -69,6 +70,34 @@
   height: 200px;
   object-fit: cover;
   display: block;
+}
+
+.delete-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(4px);
+}
+
+.delete-btn:hover {
+  background: rgba(255, 0, 0, 0.1);
+  transform: scale(1.1);
+}
+
+.delete-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .no-photos {
