@@ -84,8 +84,16 @@ function App() {
 
   return (
     <div className="app">
-      <div className="header">
-        <h1>📸 Nişan Fotoğrafları</h1>
+      <div className="hero-section">
+        <div className="hero-content">
+          <div className="couple-names">
+            <h1 className="bride-name">Ecem</h1>
+            <div className="heart-divider">💕</div>
+            <h1 className="groom-name">Mert</h1>
+          </div>
+          <p className="event-title">Nişan Anıları</p>
+          <p className="event-date">Özel Anlarımızı Paylaşın</p>
+        </div>
         <div className="upload-section">
           <input
             type="file"
@@ -97,27 +105,68 @@ function App() {
             style={{ display: 'none' }}
           />
           <label htmlFor="photo-upload" className="upload-btn">
-            {uploading ? '⏳ Yükleniyor...' : '📤 Fotoğraf Yükle'}
+            <span className="upload-icon">📷</span>
+            <span className="upload-text">
+              {uploading ? 'Yükleniyor...' : 'Fotoğraf Paylaş'}
+            </span>
+            {uploading && <div className="upload-progress"></div>}
           </label>
+          <p className="upload-hint">
+            Birden fazla fotoğraf seçebilirsiniz
+          </p>
         </div>
       </div>
 
-      <div className="gallery">
-        {photos.map((photo) => (
-          <div key={photo.id} className="photo-item">
-            <img src={photo.downloadURL} alt={photo.fileName} />
-            <button 
-              className="delete-btn"
-              onClick={() => handleDeletePhoto(photo)}
-              disabled={deleting === photo.id}
-            >
-              {deleting === photo.id ? '⏳' : '🗑️'}
-            </button>
+      <div className="gallery-section">
+        <div className="gallery-header">
+          <h2>Anı Galerisi</h2>
+          <div className="photo-count">
+            {photos.length > 0 && (
+              <span>{photos.length} fotoğraf</span>
+            )}
           </div>
-        ))}
-        {photos.length === 0 && (
-          <p className="no-photos">Henüz fotoğraf yüklenmemiş 📱</p>
-        )}
+        </div>
+        
+        <div className="gallery">
+          {photos.map((photo, index) => (
+            <div key={photo.id} className="photo-item" style={{ animationDelay: `${index * 0.1}s` }}>
+              <div className="photo-wrapper">
+                <img src={photo.downloadURL} alt={photo.fileName} />
+                <div className="photo-overlay">
+                  <button 
+                    className="delete-btn"
+                    onClick={() => handleDeletePhoto(photo)}
+                    disabled={deleting === photo.id}
+                    title="Fotoğrafı sil"
+                  >
+                    {deleting === photo.id ? (
+                      <div className="spinner"></div>
+                    ) : (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                        <line x1="10" y1="11" x2="10" y2="17"/>
+                        <line x1="14" y1="11" x2="14" y2="17"/>
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+          
+          {photos.length === 0 && (
+            <div className="empty-state">
+              <div className="empty-icon">📸</div>
+              <h3>Henüz fotoğraf yok</h3>
+              <p>Bu özel günün anılarını paylaşmaya başlayın!</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="footer">
+        <p>💕 Ecem & Mert'in Nişan Anıları 💕</p>
+        <p className="footer-note">Sevgiyle paylaşılan her an değerlidir</p>
       </div>
     </div>
   )
