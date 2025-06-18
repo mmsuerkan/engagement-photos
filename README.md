@@ -1,54 +1,33 @@
-# React + TypeScript + Vite
+# 📸 Nişan Fotoğraf Paylaşım Uygulaması
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+QR kod ile erişilen, nişan fotoğraflarını yüksek kalitede yükleme ve görüntüleme uygulaması.
 
-Currently, two official plugins are available:
+## Özellikler
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- ✨ **QR Kod Erişimi**: Kolayca erişim için QR kod desteği
+- 📤 **Çoklu Fotoğraf Yükleme**: Aynı anda birden fazla fotoğraf yükleme
+- 🖼️ **Real-time Galeri**: Anlık fotoğraf görüntüleme
+- 📱 **Mobil Uyumlu**: Tüm cihazlardan kullanım
+- ⚡ **Yüksek Performans**: 200+ eşzamanlı kullanıcı desteği
+- 🔥 **Firebase Entegrasyonu**: Güvenli cloud storage
 
-## Expanding the ESLint configuration
+## Teknolojiler
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- React 18
+- TypeScript
+- Vite
+- Firebase Storage & Firestore
+- CSS Grid & Flexbox
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+## Kurulum
+
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Firebase Yapılandırması
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
-```
+1. Firebase Console'da proje oluştur
+2. Storage ve Firestore'u aktifleştir
+3. `src/lib/firebase.ts` dosyasını yapılandır
