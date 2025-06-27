@@ -6,6 +6,7 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import { coupleNames } from './config/names'
 import { compressImage, generateThumbnail } from './utils/imageCompression'
 import { Lightbox } from './components/Lightbox'
+import { ConfirmDialog } from './components/ConfirmDialog'
 import './App.css'
 
 interface Photo {
@@ -30,6 +31,10 @@ function App() {
   const [lastDoc, setLastDoc] = useState<DocumentSnapshot | null>(null)
   const [initialLoading, setInitialLoading] = useState(true)
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null)
+  const [confirmDialog, setConfirmDialog] = useState<{ isOpen: boolean; photo: Photo | null }>({
+    isOpen: false,
+    photo: null
+  })
   const galleryRef = useRef<HTMLDivElement>(null)
   const observerRef = useRef<IntersectionObserver | null>(null)
   const loadMoreRef = useRef<HTMLDivElement>(null)
@@ -182,9 +187,15 @@ function App() {
     event.target.value = ''
   }
 
-  const handleDeletePhoto = async (photo: Photo) => {
-    if (!confirm('Bu dosyayı silmek istediğinizden emin misiniz?')) return
+  const handleDeletePhoto = (photo: Photo) => {
+    setConfirmDialog({ isOpen: true, photo })
+  }
 
+  const confirmDelete = async () => {
+    const photo = confirmDialog.photo
+    if (!photo) return
+
+    setConfirmDialog({ isOpen: false, photo: null })
     setDeleting(photo.id)
     
     try {
@@ -354,6 +365,14 @@ function App() {
         isOpen={!!selectedPhoto}
         onClose={() => setSelectedPhoto(null)}
         onNavigate={setSelectedPhoto}
+      />
+
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        title="Fotoğrafı Sil"
+        message="Bu fotoğrafı kalıcı olarak silmek istediğinizden emin misiniz?"
+        onConfirm={confirmDelete}
+        onCancel={() => setConfirmDialog({ isOpen: false, photo: null })}
       />
     </div>
   )
