@@ -4,18 +4,22 @@ import { collection, addDoc, onSnapshot, orderBy, query, doc, deleteDoc, limit, 
 import { storage, db } from './lib/firebase'
 import DeleteIcon from '@mui/icons-material/Delete'
 import { coupleNames } from './config/names'
+import { compressImage, generateThumbnail } from './utils/imageCompression'
+import { Lightbox } from './components/Lightbox'
 import './App.css'
 
 interface Photo {
   id: string
   fileName: string
   downloadURL: string
+  thumbnailURL?: string
   uploadedAt: Date
   storagePath?: string
+  thumbnailStoragePath?: string
   fileType?: string
 }
 
-const PHOTOS_PER_PAGE = 10
+const PHOTOS_PER_PAGE = 30
 
 function App() {
   const [photos, setPhotos] = useState<Photo[]>([])
@@ -25,6 +29,8 @@ function App() {
   const [hasMore, setHasMore] = useState(true)
   const [lastDoc, setLastDoc] = useState<DocumentSnapshot | null>(null)
   const [initialLoading, setInitialLoading] = useState(true)
+  const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null)
+  const galleryRef = useRef<HTMLDivElement>(null)
   const observerRef = useRef<IntersectionObserver | null>(null)
   const loadMoreRef = useRef<HTMLDivElement>(null)
 
@@ -118,17 +124,40 @@ function App() {
     for (const file of Array.from(files)) {
       try {
         const timestamp = Date.now()
+        let fileToUpload = file
+        let thumbnailFile: File | null = null
+        
+        // Görsel ise sıkıştır
+        if (file.type.startsWith('image/')) {
+          fileToUpload = await compressImage(file)
+          thumbnailFile = await generateThumbnail(file)
+        }
+        
         const fileName = `${timestamp}-${file.name}`
         const storageRef = ref(storage, `photos/${fileName}`)
         
-        await uploadBytes(storageRef, file)
+        // Ana dosyayı yükle
+        await uploadBytes(storageRef, fileToUpload)
         const downloadURL = await getDownloadURL(storageRef)
+        
+        // Thumbnail varsa yükle
+        let thumbnailURL: string | undefined
+        let thumbnailStoragePath: string | undefined
+        if (thumbnailFile) {
+          const thumbnailName = `${timestamp}-thumb-${file.name}`
+          const thumbnailRef = ref(storage, `thumbnails/${thumbnailName}`)
+          await uploadBytes(thumbnailRef, thumbnailFile)
+          thumbnailURL = await getDownloadURL(thumbnailRef)
+          thumbnailStoragePath = `thumbnails/${thumbnailName}`
+        }
         
         const docRef = await addDoc(collection(db, 'photos'), {
           fileName: file.name,
           downloadURL,
+          thumbnailURL,
           uploadedAt: new Date(),
           storagePath: `photos/${fileName}`,
+          thumbnailStoragePath,
           fileType: file.type
         })
         
@@ -137,8 +166,10 @@ function App() {
           id: docRef.id,
           fileName: file.name,
           downloadURL,
+          thumbnailURL,
           uploadedAt: new Date(),
           storagePath: `photos/${fileName}`,
+          thumbnailStoragePath,
           fileType: file.type
         }
         setPhotos(prevPhotos => [newPhoto, ...prevPhotos])
@@ -179,6 +210,10 @@ function App() {
     } else {
       video.pause()
     }
+  }
+
+  const handlePhotoClick = (photo: Photo) => {
+    setSelectedPhoto(photo)
   }
 
   return (
@@ -226,7 +261,7 @@ function App() {
           </div>
         </div>
         
-        <div className="gallery">
+        <div className="gallery" ref={galleryRef}>
           {initialLoading ? (
             <div className="skeleton-grid">
               {[...Array(12)].map((_, i) => (
@@ -239,31 +274,38 @@ function App() {
             <>
               {photos.map((photo, index) => (
                 <div key={photo.id} className="photo-item" style={{ animationDelay: `${index * 0.05}s` }}>
-                  <div className="photo-wrapper">
+                  <div className="photo-wrapper" onClick={() => handlePhotoClick(photo)}>
                     {photo.fileType?.startsWith('video/') ? (
                       <video 
-                        src={photo.downloadURL} 
+                        src={photo.thumbnailURL || photo.downloadURL} 
                         preload="metadata"
                         muted
                         playsInline
                         loop
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        onClick={(e) => handleVideoClick(photo.id, e)}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleVideoClick(photo.id, e)
+                        }}
                         onError={(e) => {
                           console.error('Video error:', e);
                         }}
                       />
                     ) : (
                       <img 
-                        src={photo.downloadURL} 
+                        src={photo.thumbnailURL || photo.downloadURL} 
                         alt={photo.fileName}
                         loading="lazy"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
                       />
                     )}
                     <div className="photo-overlay">
                       <button 
                         className="delete-btn"
-                        onClick={() => handleDeletePhoto(photo)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDeletePhoto(photo)
+                        }}
                         disabled={deleting === photo.id}
                         title="Dosyayı sil"
                       >
@@ -305,6 +347,14 @@ function App() {
         <p>💕 {coupleNames.bride} & {coupleNames.groom}'nın Nişan Anıları 💕</p>
         <p className="footer-note">Sevgiyle paylaşılan her an değerlidir</p>
       </div>
+
+      <Lightbox
+        photo={selectedPhoto}
+        photos={photos}
+        isOpen={!!selectedPhoto}
+        onClose={() => setSelectedPhoto(null)}
+        onNavigate={setSelectedPhoto}
+      />
     </div>
   )
 }
