@@ -45,3 +45,7 @@ This is a React engagement photo sharing application built with Vite and TypeScr
 ## Turkish Language
 
 This application uses Turkish language throughout the UI and user-facing text.
+
+## Conversations
+
+- türkçe konuşalım
