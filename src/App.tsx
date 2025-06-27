@@ -124,13 +124,24 @@ function App() {
         await uploadBytes(storageRef, file)
         const downloadURL = await getDownloadURL(storageRef)
         
-        await addDoc(collection(db, 'photos'), {
+        const docRef = await addDoc(collection(db, 'photos'), {
           fileName: file.name,
           downloadURL,
           uploadedAt: new Date(),
           storagePath: `photos/${fileName}`,
           fileType: file.type
         })
+        
+        // Yeni fotoğrafı state'in başına ekle
+        const newPhoto: Photo = {
+          id: docRef.id,
+          fileName: file.name,
+          downloadURL,
+          uploadedAt: new Date(),
+          storagePath: `photos/${fileName}`,
+          fileType: file.type
+        }
+        setPhotos(prevPhotos => [newPhoto, ...prevPhotos])
       } catch (error) {
         console.error('Upload error:', error)
       }
@@ -148,6 +159,9 @@ function App() {
     try {
       // Sadece Firestore'dan sil (Storage'da dosya kalacak)
       await deleteDoc(doc(db, 'photos', photo.id))
+      
+      // State'den fotoğrafı kaldır
+      setPhotos(prevPhotos => prevPhotos.filter(p => p.id !== photo.id))
     } catch (error) {
       console.error('Delete error:', error)
       alert('Dosya silinirken hata oluştu!')
