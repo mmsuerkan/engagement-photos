@@ -218,6 +218,7 @@ html, body {
 .gallery {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-auto-rows: 280px;
   gap: 1.5rem;
   width: 100%;
   max-width: 1200px;
@@ -236,7 +237,6 @@ html, body {
   transition: all 0.3s ease;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(10px);
-  aspect-ratio: 1;
 }
 
 @keyframes fadeInUp {
@@ -253,6 +253,8 @@ html, body {
   box-shadow: 0 8px 32px rgba(0,0,0,0.1);
   transition: all 0.3s ease;
   position: relative;
+  width: 100%;
+  height: 100%;
 }
 
 .photo-wrapper:hover {
@@ -262,7 +264,7 @@ html, body {
 
 .photo-wrapper img {
   width: 100%;
-  height: 250px;
+  height: 100%;
   object-fit: cover;
   display: block;
   transition: transform 0.3s ease;
@@ -471,6 +473,7 @@ html, body {
   
   .gallery {
     grid-template-columns: 1fr;
+    grid-auto-rows: 300px;
     gap: 1rem;
     padding: 0 0.5rem;
   }
@@ -480,9 +483,6 @@ html, body {
     gap: 1rem;
   }
   
-  .photo-wrapper img {
-    height: 300px;
-  }
   
   .gallery-header {
     flex-direction: column;
@@ -518,6 +518,7 @@ html, body {
   
   .gallery {
     grid-template-columns: 1fr;
+    grid-auto-rows: 250px;
     gap: 0.8rem;
     width: 100%;
     padding: 0 0.5rem;
@@ -529,11 +530,6 @@ html, body {
     border-radius: 12px;
   }
   
-  .photo-wrapper img {
-    height: 250px;
-    width: 100%;
-    object-fit: cover;
-  }
   
   .upload-btn {
     padding: 0.8rem 1.5rem;

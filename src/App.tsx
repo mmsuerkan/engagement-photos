@@ -14,7 +14,7 @@ interface Photo {
   fileName: string
   downloadURL: string
   thumbnailURL?: string
-  uploadedAt: Date
+  uploadedAt: Date | { seconds: number; nanoseconds: number } | any
   storagePath?: string
   thumbnailStoragePath?: string
   fileType?: string

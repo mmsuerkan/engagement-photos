@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import CloseIcon from '@mui/icons-material/Close'
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
+import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch'
 import './Lightbox.css'
 
 interface Photo {
@@ -9,7 +10,7 @@ interface Photo {
   fileName: string
   downloadURL: string
   thumbnailURL?: string
-  uploadedAt: Date
+  uploadedAt: Date | { seconds: number; nanoseconds: number } | any
   storagePath?: string
   thumbnailStoragePath?: string
   fileType?: string
@@ -109,34 +110,68 @@ export function Lightbox({ photo, photos, isOpen, onClose, onNavigate }: Lightbo
                 <div className="spinner"></div>
               </div>
             )}
-            <img
-              src={photo.downloadURL}
-              alt={photo.fileName}
-              className={`lightbox-media ${imageLoaded ? 'loaded' : ''}`}
-              onLoad={() => setImageLoaded(true)}
-              onClick={(e) => e.stopPropagation()}
-            />
+            <TransformWrapper
+              initialScale={1}
+              minScale={0.5}
+              maxScale={4}
+              centerOnInit={true}
+              doubleClick={{
+                disabled: false,
+                step: 2
+              }}
+              panning={{
+                disabled: false,
+                velocityDisabled: false
+              }}
+              pinch={{
+                disabled: false
+              }}
+              wheel={{
+                disabled: false,
+                step: 0.2
+              }}
+            >
+              <TransformComponent>
+                <img
+                  src={photo.downloadURL}
+                  alt={photo.fileName}
+                  className={`lightbox-media ${imageLoaded ? 'loaded' : ''}`}
+                  onLoad={() => setImageLoaded(true)}
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ 
+                    maxWidth: '90vw', 
+                    maxHeight: '80vh',
+                    objectFit: 'contain'
+                  }}
+                />
+              </TransformComponent>
+            </TransformWrapper>
           </>
         )}
         
         <div className="lightbox-info">
           <p className="lightbox-date">
-            {photo.uploadedAt instanceof Date 
-              ? photo.uploadedAt.toLocaleDateString('tr-TR', {
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })
-              : new Date(photo.uploadedAt).toLocaleDateString('tr-TR', {
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })
-            }
+            {(() => {
+              let date;
+              if (photo.uploadedAt instanceof Date) {
+                date = photo.uploadedAt;
+              } else if (photo.uploadedAt && typeof photo.uploadedAt === 'object' && 'seconds' in photo.uploadedAt) {
+                // Firestore timestamp
+                date = new Date(photo.uploadedAt.seconds * 1000);
+              } else if (photo.uploadedAt) {
+                date = new Date(photo.uploadedAt);
+              } else {
+                return '';
+              }
+              
+              return isNaN(date.getTime()) ? '' : date.toLocaleDateString('tr-TR', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              });
+            })()}
           </p>
         </div>
       </div>
