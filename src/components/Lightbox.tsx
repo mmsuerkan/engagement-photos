@@ -120,15 +120,23 @@ export function Lightbox({ photo, photos, isOpen, onClose, onNavigate }: Lightbo
         )}
         
         <div className="lightbox-info">
-          <p className="lightbox-filename">{photo.fileName}</p>
           <p className="lightbox-date">
-            {new Date(photo.uploadedAt).toLocaleDateString('tr-TR', {
-              day: 'numeric',
-              month: 'long',
-              year: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit'
-            })}
+            {photo.uploadedAt instanceof Date 
+              ? photo.uploadedAt.toLocaleDateString('tr-TR', {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })
+              : new Date(photo.uploadedAt).toLocaleDateString('tr-TR', {
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })
+            }
           </p>
         </div>
       </div>

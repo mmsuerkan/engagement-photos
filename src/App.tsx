@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
-import { collection, addDoc, onSnapshot, orderBy, query, doc, deleteDoc, limit, startAfter, DocumentSnapshot } from 'firebase/firestore'
+import { collection, addDoc, onSnapshot, orderBy, query, doc, deleteDoc, limit, startAfter, DocumentSnapshot, serverTimestamp } from 'firebase/firestore'
 import { storage, db } from './lib/firebase'
 import DeleteIcon from '@mui/icons-material/Delete'
 import { coupleNames } from './config/names'
@@ -160,7 +160,7 @@ function App() {
           fileName: file.name,
           downloadURL,
           thumbnailURL,
-          uploadedAt: new Date(),
+          uploadedAt: serverTimestamp(),
           storagePath: `photos/${fileName}`,
           thumbnailStoragePath,
           fileType: file.type
