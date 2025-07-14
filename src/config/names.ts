@@ -1,6 +1,6 @@
 export const coupleNames = {
   bride: "Ecem",
-  groom: "mmmmmerts"
+  groom: "Mert"
 } as const;
 
 export type CoupleNames = typeof coupleNames;
