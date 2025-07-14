@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { ref, uploadBytes, getDownloadURL, listAll } from 'firebase/storage'
-import { collection, addDoc, onSnapshot, orderBy, query, doc, deleteDoc, limit, startAfter, DocumentSnapshot, serverTimestamp, getDocs } from 'firebase/firestore'
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
+import { collection, addDoc, onSnapshot, orderBy, query, doc, deleteDoc, limit, startAfter, DocumentSnapshot, serverTimestamp } from 'firebase/firestore'
 import { storage, db } from './lib/firebase'
 import DeleteIcon from '@mui/icons-material/Delete'
 import DownloadIcon from '@mui/icons-material/Download'
@@ -8,7 +8,6 @@ import { coupleNames } from './config/names'
 import { compressImage, generateThumbnail } from './utils/imageCompression'
 import { Lightbox } from './components/Lightbox'
 import { ConfirmDialog } from './components/ConfirmDialog'
-import JSZip from 'jszip'
 import './App.css'
 
 interface Photo {
@@ -37,7 +36,6 @@ function App() {
     isOpen: false,
     photo: null
   })
-  const [downloading, setDownloading] = useState(false)
   const galleryRef = useRef<HTMLDivElement>(null)
   const observerRef = useRef<IntersectionObserver | null>(null)
   const loadMoreRef = useRef<HTMLDivElement>(null)
@@ -223,107 +221,6 @@ function App() {
     }
     
     setDeleting(null)
-  }
-
-  const downloadAllPhotos = async () => {
-    setDownloading(true)
-    
-    try {
-      // Tüm fotoğrafları Firestore'dan al
-      const allPhotosQuery = query(
-        collection(db, 'photos'), 
-        orderBy('uploadedAt', 'desc')
-      )
-      const snapshot = await getDocs(allPhotosQuery)
-      const allPhotos = snapshot.docs.map((doc: any) => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Photo[]
-
-      if (allPhotos.length === 0) {
-        alert('İndirilecek fotoğraf bulunamadı!')
-        return
-      }
-
-      const zip = new JSZip()
-      let downloadedCount = 0
-
-      for (const photo of allPhotos) {
-        try {
-          // CORS sorununu aşmak için mode: 'no-cors' kullan
-          const response = await fetch(photo.downloadURL, {
-            method: 'GET',
-            mode: 'cors',
-            headers: {
-              'Accept': '*/*',
-            }
-          })
-          
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`)
-          }
-          
-          const blob = await response.blob()
-          
-          // Dosya uzantısını al
-          const fileExtension = photo.fileName.split('.').pop() || 'jpg'
-          const fileName = `${photo.fileName.replace(/\.[^/.]+$/, '')}.${fileExtension}`
-          
-          zip.file(fileName, blob)
-          downloadedCount++
-          console.log(`İndirildi: ${fileName}`)
-        } catch (error) {
-          console.error(`Fotoğraf indirilemedi: ${photo.fileName}`, error)
-          
-          // Alternatif olarak direkt link açma deneyelim
-          try {
-            const link = document.createElement('a')
-            link.href = photo.downloadURL
-            link.download = photo.fileName
-            link.target = '_blank'
-            document.body.appendChild(link)
-            link.click()
-            document.body.removeChild(link)
-          } catch (linkError) {
-            console.error('Link ile de indirilemedi:', linkError)
-          }
-        }
-      }
-
-      if (downloadedCount === 0) {
-        alert('CORS sorunu nedeniyle ZIP oluşturulamadı. Her fotoğraf ayrı ayrı indirilmeye çalışılıyor...')
-        
-        // Her fotoğrafı ayrı ayrı indir
-        allPhotos.forEach(photo => {
-          const link = document.createElement('a')
-          link.href = photo.downloadURL
-          link.download = photo.fileName
-          link.target = '_blank'
-          document.body.appendChild(link)
-          link.click()
-          document.body.removeChild(link)
-        })
-        return
-      }
-
-      // ZIP dosyasını oluştur ve indir
-      const zipBlob = await zip.generateAsync({ type: 'blob' })
-      const url = URL.createObjectURL(zipBlob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `${coupleNames.bride}-${coupleNames.groom}-nisan-fotolari.zip`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(url)
-
-      alert(`${downloadedCount} fotoğraf başarıyla ZIP olarak indirildi!`)
-    } catch (error) {
-      console.error('İndirme hatası:', error)
-      alert('Fotoğraflar indirilirken hata oluştu!')
-    } finally {
-      setDownloading(false)
-    }
   }
 
   const handleVideoClick = (_photoId: string, event: React.MouseEvent<HTMLVideoElement>) => {
