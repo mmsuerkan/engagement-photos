@@ -34,7 +34,7 @@ interface UploadItem {
   retryCount?: number
 }
 
-const PHOTOS_PER_PAGE = 30
+const PHOTOS_PER_PAGE = 20 // Daha hızlı ilk yükleme için azaltıldı
 
 function App() {
   const [photos, setPhotos] = useState<Photo[]>([])
@@ -124,7 +124,10 @@ function App() {
           loadPhotos()
         }
       },
-      { threshold: 0.1 }
+      { 
+        threshold: 0.1,
+        rootMargin: '50% 0px' // Viewport'un %50 altından yüklemeye başla
+      }
     )
 
     if (loadMoreRef.current) {

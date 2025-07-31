@@ -271,6 +271,9 @@ html, body {
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
+  /* Performans optimizasyonları */
+  will-change: transform;
+  contain: layout style paint;
 }
 
 .photo-item {
@@ -284,6 +287,10 @@ html, body {
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  /* Performans optimizasyonları */
+  transform: translateZ(0) translateY(20px);
+  backface-visibility: hidden;
+  will-change: transform, opacity;
   backdrop-filter: blur(10px);
 }
 

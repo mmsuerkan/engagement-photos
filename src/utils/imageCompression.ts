@@ -12,11 +12,11 @@ export async function compressImage(
   options: CompressionOptions = {}
 ): Promise<File> {
   const defaultOptions = {
-    maxSizeMB: 2,
-    maxWidthOrHeight: 2560,
+    maxSizeMB: 1.5,
+    maxWidthOrHeight: 2048,
     useWebWorker: true,
     fileType: file.type,
-    initialQuality: 0.9,
+    initialQuality: 0.75,
     ...options
   }
 
@@ -32,14 +32,14 @@ export async function compressImage(
 
 export async function generateThumbnail(
   file: File,
-  maxSize: number = 400
+  maxSize: number = 300
 ): Promise<File> {
   const thumbnailOptions = {
-    maxSizeMB: 0.3,
+    maxSizeMB: 0.15,
     maxWidthOrHeight: maxSize,
     useWebWorker: true,
     fileType: 'image/jpeg',
-    initialQuality: 0.8
+    initialQuality: 0.7
   }
 
   try {
