@@ -19,7 +19,6 @@ export function UploadProgress({ uploads, onRetry, onClose }: UploadProgressProp
   const [isMinimized, setIsMinimized] = useState(false)
   
   const activeUploads = uploads.filter(u => u.status === 'uploading' || u.status === 'pending')
-  const completedUploads = uploads.filter(u => u.status === 'success')
   const failedUploads = uploads.filter(u => u.status === 'error')
   
   const totalProgress = uploads.length > 0
