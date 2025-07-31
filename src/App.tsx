@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
+import { ref, uploadBytes, getDownloadURL, uploadBytesResumable } from 'firebase/storage'
 import { collection, addDoc, onSnapshot, orderBy, query, doc, deleteDoc, limit, startAfter, DocumentSnapshot, serverTimestamp } from 'firebase/firestore'
 import { storage, db } from './lib/firebase'
 import DeleteIcon from '@mui/icons-material/Delete'
@@ -8,6 +8,9 @@ import { coupleNames } from './config/names'
 import { compressImage, generateThumbnail } from './utils/imageCompression'
 import { Lightbox } from './components/Lightbox'
 import { ConfirmDialog } from './components/ConfirmDialog'
+import { UploadProgress } from './components/UploadProgress'
+import { NetworkStatus } from './components/NetworkStatus'
+import { PhotoPlaceholder } from './components/PhotoPlaceholder'
 import './App.css'
 
 interface Photo {
@@ -19,6 +22,16 @@ interface Photo {
   storagePath?: string
   thumbnailStoragePath?: string
   fileType?: string
+}
+
+interface UploadItem {
+  id: string
+  fileName: string
+  progress: number
+  status: 'pending' | 'uploading' | 'success' | 'error'
+  error?: string
+  file?: File
+  retryCount?: number
 }
 
 const PHOTOS_PER_PAGE = 30
@@ -36,9 +49,11 @@ function App() {
     isOpen: false,
     photo: null
   })
+  const [uploadQueue, setUploadQueue] = useState<UploadItem[]>([])
   const galleryRef = useRef<HTMLDivElement>(null)
   const observerRef = useRef<IntersectionObserver | null>(null)
   const loadMoreRef = useRef<HTMLDivElement>(null)
+  const uploadTasksRef = useRef<Map<string, any>>(new Map())
 
   const loadPhotos = useCallback(async (isInitial = false) => {
     if (loading || (!hasMore && !isInitial)) return
@@ -125,67 +140,174 @@ function App() {
     const files = event.target.files
     if (!files) return
 
+    const newUploads: UploadItem[] = Array.from(files).map((file, index) => ({
+      id: `${Date.now()}-${index}`,
+      fileName: file.name,
+      progress: 0,
+      status: 'pending' as const,
+      file
+    }))
+
+    setUploadQueue(prev => [...prev, ...newUploads])
     setUploading(true)
     
-    for (const file of Array.from(files)) {
-      try {
-        const timestamp = Date.now()
-        let fileToUpload = file
-        let thumbnailFile: File | null = null
-        
-        // Görsel ise sıkıştır
-        if (file.type.startsWith('image/')) {
-          fileToUpload = await compressImage(file)
-          thumbnailFile = await generateThumbnail(file)
-        }
-        
-        const fileName = `${timestamp}-${file.name}`
-        const storageRef = ref(storage, `photos/${fileName}`)
-        
-        // Ana dosyayı yükle
-        await uploadBytes(storageRef, fileToUpload)
-        const downloadURL = await getDownloadURL(storageRef)
-        
-        // Thumbnail varsa yükle
-        let thumbnailURL: string | undefined
-        let thumbnailStoragePath: string | undefined
-        if (thumbnailFile) {
-          const thumbnailName = `${timestamp}-thumb-${file.name}`
-          const thumbnailRef = ref(storage, `thumbnails/${thumbnailName}`)
-          await uploadBytes(thumbnailRef, thumbnailFile)
-          thumbnailURL = await getDownloadURL(thumbnailRef)
-          thumbnailStoragePath = `thumbnails/${thumbnailName}`
-        }
-        
-        const docRef = await addDoc(collection(db, 'photos'), {
-          fileName: file.name,
-          downloadURL,
-          thumbnailURL,
-          uploadedAt: serverTimestamp(),
-          storagePath: `photos/${fileName}`,
-          thumbnailStoragePath,
-          fileType: file.type
-        })
-        
-        // Yeni fotoğrafı state'in başına ekle
-        const newPhoto: Photo = {
-          id: docRef.id,
-          fileName: file.name,
-          downloadURL,
-          thumbnailURL,
-          uploadedAt: new Date(),
-          storagePath: `photos/${fileName}`,
-          thumbnailStoragePath,
-          fileType: file.type
-        }
-        setPhotos(prevPhotos => [newPhoto, ...prevPhotos])
-      } catch (error) {
-        console.error('Upload error:', error)
-      }
+    // Dosyaları sırayla yükle
+    for (const uploadItem of newUploads) {
+      await uploadFile(uploadItem)
     }
     
     setUploading(false)
     event.target.value = ''
+  }
+
+  const uploadFile = async (uploadItem: UploadItem, isRetry = false) => {
+    if (!uploadItem.file) return
+
+    // Yükleme başladı
+    setUploadQueue(prev => 
+      prev.map(item => 
+        item.id === uploadItem.id 
+          ? { ...item, status: 'uploading', progress: 0 }
+          : item
+      )
+    )
+
+    try {
+      const timestamp = Date.now()
+      let fileToUpload = uploadItem.file
+      let thumbnailFile: File | null = null
+      
+      // Görsel ise sıkıştır
+      if (uploadItem.file.type.startsWith('image/')) {
+        fileToUpload = await compressImage(uploadItem.file)
+        thumbnailFile = await generateThumbnail(uploadItem.file)
+      }
+      
+      const fileName = `${timestamp}-${uploadItem.file.name}`
+      const storageRef = ref(storage, `photos/${fileName}`)
+      
+      // Ana dosyayı yükle (progress takibi ile)
+      const uploadTask = uploadBytesResumable(storageRef, fileToUpload)
+      
+      // Task'ı sakla (iptal edebilmek için)
+      uploadTasksRef.current.set(uploadItem.id, uploadTask)
+      
+      await new Promise<void>((resolve, reject) => {
+        uploadTask.on(
+          'state_changed',
+          (snapshot) => {
+            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100
+            setUploadQueue(prev => 
+              prev.map(item => 
+                item.id === uploadItem.id 
+                  ? { ...item, progress: Math.round(progress) }
+                  : item
+              )
+            )
+          },
+          (error) => {
+            reject(error)
+          },
+          () => {
+            resolve()
+          }
+        )
+      })
+      
+      const downloadURL = await getDownloadURL(storageRef)
+      
+      // Thumbnail varsa yükle
+      let thumbnailURL: string | undefined
+      let thumbnailStoragePath: string | undefined
+      if (thumbnailFile) {
+        const thumbnailName = `${timestamp}-thumb-${uploadItem.file.name}`
+        const thumbnailRef = ref(storage, `thumbnails/${thumbnailName}`)
+        await uploadBytes(thumbnailRef, thumbnailFile)
+        thumbnailURL = await getDownloadURL(thumbnailRef)
+        thumbnailStoragePath = `thumbnails/${thumbnailName}`
+      }
+      
+      const docRef = await addDoc(collection(db, 'photos'), {
+        fileName: uploadItem.file.name,
+        downloadURL,
+        thumbnailURL,
+        uploadedAt: serverTimestamp(),
+        storagePath: `photos/${fileName}`,
+        thumbnailStoragePath,
+        fileType: uploadItem.file.type
+      })
+      
+      // Yeni fotoğrafı state'in başına ekle
+      const newPhoto: Photo = {
+        id: docRef.id,
+        fileName: uploadItem.file.name,
+        downloadURL,
+        thumbnailURL,
+        uploadedAt: new Date(),
+        storagePath: `photos/${fileName}`,
+        thumbnailStoragePath,
+        fileType: uploadItem.file.type
+      }
+      setPhotos(prevPhotos => [newPhoto, ...prevPhotos])
+      
+      // Başarılı olarak işaretle
+      setUploadQueue(prev => 
+        prev.map(item => 
+          item.id === uploadItem.id 
+            ? { ...item, status: 'success', progress: 100 }
+            : item
+        )
+      )
+      
+      // Task'ı temizle
+      uploadTasksRef.current.delete(uploadItem.id)
+      
+    } catch (error: any) {
+      console.error('Upload error:', error)
+      
+      // Hata durumunda
+      const errorMessage = error.code === 'storage/unauthorized' 
+        ? 'Yetki hatası'
+        : error.code === 'storage/canceled'
+        ? 'İptal edildi'
+        : error.code === 'storage/retry-limit-exceeded'
+        ? 'Çok fazla deneme'
+        : 'Yükleme başarısız'
+      
+      setUploadQueue(prev => 
+        prev.map(item => 
+          item.id === uploadItem.id 
+            ? { 
+                ...item, 
+                status: 'error', 
+                error: errorMessage,
+                retryCount: (item.retryCount || 0) + (isRetry ? 1 : 0)
+              }
+            : item
+        )
+      )
+      
+      // Task'ı temizle
+      uploadTasksRef.current.delete(uploadItem.id)
+      
+      // Otomatik yeniden deneme (max 3 kez)
+      if (!isRetry && (!uploadItem.retryCount || uploadItem.retryCount < 3)) {
+        setTimeout(() => {
+          handleRetryUpload(uploadItem.id)
+        }, 2000)
+      }
+    }
+  }
+
+  const handleRetryUpload = (uploadId: string) => {
+    const uploadItem = uploadQueue.find(item => item.id === uploadId)
+    if (uploadItem && uploadItem.file) {
+      uploadFile(uploadItem, true)
+    }
+  }
+
+  const handleCloseUploadProgress = () => {
+    setUploadQueue([])
   }
 
   const handleDeletePhoto = (photo: Photo) => {
@@ -297,30 +419,17 @@ function App() {
               {photos.map((photo, index) => (
                 <div key={photo.id} className="photo-item" style={{ animationDelay: `${index * 0.05}s` }}>
                   <div className="photo-wrapper" onClick={() => handlePhotoClick(photo)}>
-                    {photo.fileType?.startsWith('video/') ? (
-                      <video 
-                        src={photo.thumbnailURL || photo.downloadURL} 
-                        preload="metadata"
-                        muted
-                        playsInline
-                        loop
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleVideoClick(photo.id, e)
-                        }}
-                        onError={(e) => {
-                          console.error('Video error:', e);
-                        }}
-                      />
-                    ) : (
-                      <img 
-                        src={photo.thumbnailURL || photo.downloadURL} 
-                        alt={photo.fileName}
-                        loading="lazy"
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer' }}
-                      />
-                    )}
+                    <PhotoPlaceholder
+                      src={photo.downloadURL}
+                      thumbnailSrc={photo.thumbnailURL}
+                      alt={photo.fileName}
+                      isVideo={photo.fileType?.startsWith('video/')}
+                      onClick={photo.fileType?.startsWith('video/') ? undefined : () => handlePhotoClick(photo)}
+                      onVideoClick={photo.fileType?.startsWith('video/') ? (e) => {
+                        e.stopPropagation()
+                        handleVideoClick(photo.id, e)
+                      } : undefined}
+                    />
                     <div className="photo-overlay">
                       <div className="photo-actions">
                         <button 
@@ -396,6 +505,14 @@ function App() {
         message="Bu fotoğrafı kalıcı olarak silmek istediğinizden emin misiniz?"
         onConfirm={confirmDelete}
         onCancel={() => setConfirmDialog({ isOpen: false, photo: null })}
+      />
+
+      <NetworkStatus />
+
+      <UploadProgress
+        uploads={uploadQueue}
+        onRetry={handleRetryUpload}
+        onClose={handleCloseUploadProgress}
       />
     </div>
   )
