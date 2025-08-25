@@ -372,7 +372,7 @@ function App() {
             <div className="heart-divider">💕</div>
             <h1 className="groom-name">{coupleNames.groom}</h1>
           </div>
-          <p className="event-title">Nişan Anıları</p>
+          <p className="event-title">SENA & BURAK Nişan Anıları</p>
           <p className="event-date">Özel Anlarımızı Paylaşın</p>
         </div>
         <div className="upload-section">
@@ -490,7 +490,7 @@ function App() {
       </div>
 
       <div className="footer">
-        <p>💕 {coupleNames.bride} & {coupleNames.groom}'nın Nişan Anıları 💕</p>
+        <p>💕 {coupleNames.bride} & {coupleNames.groom} Nişan Anıları 💕</p>
         <p className="footer-note">Sevgiyle paylaşılan her an değerlidir</p>
       </div>
 
