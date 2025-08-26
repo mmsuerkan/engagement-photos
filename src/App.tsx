@@ -9,7 +9,6 @@ import { compressImage, generateThumbnail } from './utils/imageCompression'
 import { Lightbox } from './components/Lightbox'
 import { ConfirmDialog } from './components/ConfirmDialog'
 import { UploadProgress } from './components/UploadProgress'
-import { NetworkStatus } from './components/NetworkStatus'
 import { PhotoPlaceholder } from './components/PhotoPlaceholder'
 import './App.css'
 
@@ -505,7 +504,7 @@ function App() {
         onCancel={() => setConfirmDialog({ isOpen: false, photo: null })}
       />
 
-      <NetworkStatus />
+
 
       <UploadProgress
         uploads={uploadQueue}
