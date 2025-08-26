@@ -401,7 +401,6 @@ function App() {
             )}
           </div>
         </div>
-        
         <div className="gallery" ref={galleryRef}>
           {initialLoading ? (
             <div className="skeleton-grid">
@@ -459,7 +458,6 @@ function App() {
                   </div>
                 </div>
               ))}
-              
               {photos.length === 0 && !loading && (
                 <div className="empty-state">
                   <div className="empty-icon">📸</div>
